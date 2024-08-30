@@ -36,9 +36,9 @@ def calculate_robust_zscore(series):
     mad = np.median(np.abs(series - median))
     return (series - median) / (mad if mad else 1)
 
-# Sigmoid function
-def sigmoid(x, slope=2):  # Increased slope to make the curve steeper
-    return 100 / (1 + np.exp(-slope * x))
+# Min-Max Scaling function
+def min_max_scale(series):
+    return (series - series.min()) / (series.max() - series.min())
 
 # Function to aggregate and process data for Auto-Testing CNCP
 def autotesting_aggregate(new_data, target_roas_d0, target_cpi):
@@ -89,24 +89,31 @@ def autotesting_aggregate(new_data, target_roas_d0, target_cpi):
     aggregated_data['z_IPM'] = calculate_robust_zscore(aggregated_data['IPM'])
     aggregated_data['z_CPI_diff'] = calculate_robust_zscore(aggregated_data['CPI_diff'])
 
+    # Min-Max Scaling on z-scores
+    aggregated_data['scaled_ROAS_Mat_D3'] = min_max_scale(aggregated_data['z_ROAS_Mat_D3'])
+    aggregated_data['scaled_cost'] = min_max_scale(aggregated_data['z_cost'])
+    aggregated_data['scaled_ROAS_diff'] = min_max_scale(aggregated_data['z_ROAS_diff'])
+    aggregated_data['scaled_IPM'] = min_max_scale(aggregated_data['z_IPM'])
+    aggregated_data['scaled_CPI_diff'] = min_max_scale(aggregated_data['z_CPI_diff'])
+
     # Define weights for each component
     weights = {
-        'z_cost': 1.0,
-        'z_ROAS_diff': 1.5,
-        'z_ROAS_Mat_D3': 1.5,
-        'z_IPM': 1.0,
-        'z_CPI_diff': 1.2
+        'scaled_cost': 1.0,
+        'scaled_ROAS_diff': 1.5,
+        'scaled_ROAS_Mat_D3': 1.5,
+        'scaled_IPM': 1.0,
+        'scaled_CPI_diff': 1.2
     }
 
-    # Lumina Score calculation with penalties for unreliable installs
+    # Lumina Score calculation without sigmoid, using weighted sum
     def calculate_lumina_score(row):
-        base_score = sigmoid(np.log(
-            np.exp(row['z_cost'] * weights['z_cost']) * 
-            np.exp(row['z_ROAS_diff'] * weights['z_ROAS_diff']) * 
-            np.exp(row['z_ROAS_Mat_D3'] * weights['z_ROAS_Mat_D3']) * 
-            np.exp(row['z_IPM'] * weights['z_IPM']) * 
-            np.exp(row['z_CPI_diff'] * weights['z_CPI_diff'])
-        ))
+        base_score = (
+            row['scaled_cost'] * weights['scaled_cost'] + 
+            row['scaled_ROAS_diff'] * weights['scaled_ROAS_diff'] + 
+            row['scaled_ROAS_Mat_D3'] * weights['scaled_ROAS_Mat_D3'] + 
+            row['scaled_IPM'] * weights['scaled_IPM'] + 
+            row['scaled_CPI_diff'] * weights['scaled_CPI_diff']
+        )
         # Penalize if installs are low or unreliable
         if row['installs'] < 5 or row['IPM'] < 0.5:
             return base_score * 0.8  # Penalize by 20%
@@ -119,6 +126,7 @@ def autotesting_aggregate(new_data, target_roas_d0, target_cpi):
     min_score = valid_creatives['Lumina_Score'].min()
     max_score = valid_creatives['Lumina_Score'].max()
     valid_creatives['Lumina_Score'] = (valid_creatives['Lumina_Score'] - min_score) / (max_score - min_score) * 100
+
     return valid_creatives
 
 # Streamlit app
