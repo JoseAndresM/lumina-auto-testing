@@ -37,8 +37,8 @@ def calculate_robust_zscore(series):
     return (series - median) / (mad if mad else 1)
 
 # Sigmoid function
-def sigmoid(x):
-    return 100 / (1 + np.exp(-x))
+def sigmoid(x, slope=2):  # Increased slope to make the curve steeper
+    return 100 / (1 + np.exp(-slope * x))
 
 # Function to aggregate and process data for Auto-Testing CNCP
 def autotesting_aggregate(new_data, target_roas_d0, target_cpi):
@@ -99,22 +99,26 @@ def autotesting_aggregate(new_data, target_roas_d0, target_cpi):
     }
 
     # Lumina Score calculation with penalties for unreliable installs
-    def calculate_lumina_score(row):
-        base_score = sigmoid(np.log(
-            np.exp(row['z_cost'] * weights['z_cost']) * 
-            np.exp(row['z_ROAS_diff'] * weights['z_ROAS_diff']) * 
-            np.exp(row['z_ROAS_Mat_D3'] * weights['z_ROAS_Mat_D3']) * 
-            np.exp(row['z_IPM'] * weights['z_IPM']) * 
-            np.exp(row['z_CPI_diff'] * weights['z_CPI_diff'])
-        ))
-        # Penalize if installs are low or unreliable
-        if row['installs'] < 5 or row['IPM'] < 0.5:
-            return base_score * 0.8  # Penalize by 20%
-        return base_score
+def calculate_lumina_score(row):
+    base_score = sigmoid(np.log(
+        np.exp(row['z_cost'] * weights['z_cost']) * 
+        np.exp(row['z_ROAS_diff'] * weights['z_ROAS_diff']) * 
+        np.exp(row['z_ROAS_Mat_D3'] * weights['z_ROAS_Mat_D3']) * 
+        np.exp(row['z_IPM'] * weights['z_IPM']) * 
+        np.exp(row['z_CPI_diff'] * weights['z_CPI_diff'])
+    ))
+    # Penalize if installs are low or unreliable
+    if row['installs'] < 5 or row['IPM'] < 0.5:
+        return base_score * 0.8  # Penalize by 20%
+    return base_score
 
     valid_creatives = aggregated_data[aggregated_data['installs'] >= 5]
     valid_creatives['Lumina_Score'] = valid_creatives.apply(calculate_lumina_score, axis=1)
 
+    # Normalize the Lumina score
+    min_score = valid_creatives['Lumina_Score'].min()
+    max_score = valid_creatives['Lumina_Score'].max()
+    valid_creatives['Lumina_Score'] = (valid_creatives['Lumina_Score'] - min_score) / (max_score - min_score) * 100
     return valid_creatives
 
 # Streamlit app
