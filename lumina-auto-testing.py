@@ -164,7 +164,7 @@ if new_file and game_code:
             'Display', 'TTCC_0021_Ship Craft - Gaming App'
         ]
         new_data = new_data[~new_data['creative_network'].isin(exclude_creative_ids)]
-                new_data = new_data[~new_data['creative_network'].str.startswith('TTCC')]
+        new_data = new_data[~new_data['creative_network'].str.startswith('TTCC')]
 
         # Step 3: Extract creative IDs
         new_data['creative_id'] = new_data.apply(lambda row: extract_creative_id(row['creative_network'], game_code), axis=1)
