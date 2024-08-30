@@ -50,7 +50,7 @@ def autotesting_aggregate(new_data, target_roas_d0, target_cpi):
     # Check if all required columns are present
     required_columns = ['impressions', 'cost', 'installs', 'roas_d0', 'roas_d3', 'roas_d7', 'retention_rate_d1',
                         'retention_rate_d3', 'retention_rate_d7', 'lifetime_value_d0', 'lifetime_value_d3', 
-                        'lifetime_value_d7', 'ecpi', 'CPI']
+                        'lifetime_value_d7', 'CPI']
     missing_columns = [col for col in required_columns if col not in new_data.columns]
     
     if missing_columns:
@@ -70,7 +70,6 @@ def autotesting_aggregate(new_data, target_roas_d0, target_cpi):
         'lifetime_value_d0': 'mean',
         'lifetime_value_d3': 'mean',
         'lifetime_value_d7': 'mean',
-        'ecpi': 'mean',
         'CPI': 'mean'
     }).reset_index()
 
@@ -155,4 +154,4 @@ if new_file and game_code:
             
             # Step 6: Output the overall creative performance data as CSV
             overall_output = aggregated_data.to_csv(index=False)
-            st.download_button("Download Overall Creative Performance CSV", overall_output.encode('utf-8'), "Overall_Creative_Performance.csv")
+            st.download_button("Download Overall Creative Performance CSV", overall_output.encode('utf-
