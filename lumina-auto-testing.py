@@ -124,7 +124,7 @@ def autotesting_aggregate(new_data, target_roas_d0, target_cpi):
             return lumina_score * 0.8  # Penalize by 20%
         return lumina_score
 
-    valid_creatives = aggregated_data[aggregated_data['installs'] >= 5]
+    valid_creatives = aggregated_data[aggregated_data['installs'] >= 1]
     valid_creatives['Lumina_Score'] = valid_creatives.apply(calculate_lumina_score, axis=1)
 
     # Normalize the Lumina score to 0-100
