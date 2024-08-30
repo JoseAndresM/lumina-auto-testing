@@ -40,6 +40,10 @@ def calculate_robust_zscore(series):
 def min_max_scale(series):
     return (series - series.min()) / (series.max() - series.min())
 
+# Sigmoid function
+def sigmoid(x, slope=2):
+    return 1 / (1 + np.exp(-slope * x))
+
 # Function to aggregate and process data for Auto-Testing CNCP
 def autotesting_aggregate(new_data, target_roas_d0, target_cpi):
     # Adjusted column names specific to Auto-Testing CNCP
@@ -105,32 +109,32 @@ def autotesting_aggregate(new_data, target_roas_d0, target_cpi):
         'scaled_CPI_diff': 1.2
     }
 
-    # Lumina Score calculation without sigmoid, using weighted sum
+    # Lumina Score calculation using weighted sum and sigmoid transformation
     def calculate_lumina_score(row):
-        base_score = (
+        weighted_sum = (
             row['scaled_cost'] * weights['scaled_cost'] + 
             row['scaled_ROAS_diff'] * weights['scaled_ROAS_diff'] + 
             row['scaled_ROAS_Mat_D3'] * weights['scaled_ROAS_Mat_D3'] + 
             row['scaled_IPM'] * weights['scaled_IPM'] + 
             row['scaled_CPI_diff'] * weights['scaled_CPI_diff']
         )
+        lumina_score = sigmoid(weighted_sum)
         # Penalize if installs are low or unreliable
         if row['installs'] < 5 or row['IPM'] < 0.5:
-            return base_score * 0.8  # Penalize by 20%
-        return base_score
+            return lumina_score * 0.8  # Penalize by 20%
+        return lumina_score
 
     valid_creatives = aggregated_data[aggregated_data['installs'] >= 5]
     valid_creatives['Lumina_Score'] = valid_creatives.apply(calculate_lumina_score, axis=1)
 
-    # Normalize the Lumina score
+    # Normalize the Lumina score to 0-100
     min_score = valid_creatives['Lumina_Score'].min()
     max_score = valid_creatives['Lumina_Score'].max()
     valid_creatives['Lumina_Score'] = (valid_creatives['Lumina_Score'] - min_score) / (max_score - min_score) * 100
-
     return valid_creatives
 
 # Streamlit app
-st.title("Auto-Testing CNCP Analyzer")
+st.title("Lumina - Auto-Testing Analyzer")
 
 # File upload section
 st.sidebar.header("Upload Files")
