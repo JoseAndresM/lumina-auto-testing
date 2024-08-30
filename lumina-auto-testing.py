@@ -30,9 +30,11 @@ def categorize_creative(row, average_ipm, average_cost, impressions_threshold, c
     else:
         return 'Testing'
 
-# Function to calculate z-scores manually
-def calculate_zscore(series):
-    return (series - series.mean()) / series.std()
+# Function to calculate robust z-scores
+def calculate_robust_zscore(series):
+    median = series.median()
+    mad = np.median(np.abs(series - median))
+    return (series - median) / (mad if mad else 1)
 
 # Sigmoid function
 def sigmoid(x):
@@ -81,17 +83,38 @@ def autotesting_aggregate(new_data, target_roas_d0, target_cpi):
     aggregated_data['CPI_diff'] = target_cpi - aggregated_data['CPI']
 
     aggregated_data['ROAS Mat. D3'] = (aggregated_data['roas_d3'] / aggregated_data['roas_d0']).replace([float('inf'), -float('inf'), np.nan], 0).round(2)
-    aggregated_data['z_ROAS_Mat_D3'] = calculate_zscore(aggregated_data['ROAS Mat. D3'])
-    aggregated_data['z_cost'] = calculate_zscore(aggregated_data['cost'])
-    aggregated_data['z_ROAS_diff'] = calculate_zscore(aggregated_data['ROAS_diff'])
-    aggregated_data['z_IPM'] = calculate_zscore(aggregated_data['IPM'])
-    aggregated_data['z_CPI_diff'] = calculate_zscore(aggregated_data['CPI_diff'])
+    aggregated_data['z_ROAS_Mat_D3'] = calculate_robust_zscore(aggregated_data['ROAS Mat. D3'])
+    aggregated_data['z_cost'] = calculate_robust_zscore(aggregated_data['cost'])
+    aggregated_data['z_ROAS_diff'] = calculate_robust_zscore(aggregated_data['ROAS_diff'])
+    aggregated_data['z_IPM'] = calculate_robust_zscore(aggregated_data['IPM'])
+    aggregated_data['z_CPI_diff'] = calculate_robust_zscore(aggregated_data['CPI_diff'])
 
-    # Lumina Score calculation
+    # Define weights for each component
+    weights = {
+        'z_cost': 1.0,
+        'z_ROAS_diff': 1.5,
+        'z_ROAS_Mat_D3': 1.5,
+        'z_IPM': 1.0,
+        'z_CPI_diff': 1.2
+    }
+
+    # Lumina Score calculation with penalties for unreliable installs
+    def calculate_lumina_score(row):
+        base_score = sigmoid(np.log(
+            np.exp(row['z_cost'] * weights['z_cost']) * 
+            np.exp(row['z_ROAS_diff'] * weights['z_ROAS_diff']) * 
+            np.exp(row['z_ROAS_Mat_D3'] * weights['z_ROAS_Mat_D3']) * 
+            np.exp(row['z_IPM'] * weights['z_IPM']) * 
+            np.exp(row['z_CPI_diff'] * weights['z_CPI_diff'])
+        ))
+        # Penalize if installs are low or unreliable
+        if row['installs'] < 5 or row['IPM'] < 0.5:
+            return base_score * 0.8  # Penalize by 20%
+        return base_score
+
     valid_creatives = aggregated_data[aggregated_data['installs'] >= 5]
-    valid_creatives['Lumina_Score'] = valid_creatives.apply(
-        lambda row: sigmoid(np.log(np.exp(row['z_cost']) * np.exp(row['z_ROAS_diff']) * np.exp(row['z_ROAS_Mat_D3']) * np.exp(row['z_IPM']) * np.exp(row['z_CPI_diff']))), axis=1
-    )
+    valid_creatives['Lumina_Score'] = valid_creatives.apply(calculate_lumina_score, axis=1)
+
     return valid_creatives
 
 # Streamlit app
@@ -155,3 +178,4 @@ if new_file and game_code:
             # Step 6: Output the overall creative performance data as CSV
             overall_output = aggregated_data.to_csv(index=False)
             st.download_button("Download Overall Creative Performance CSV", overall_output.encode('utf-8'), "Overall_Creative_Performance.csv")
+
