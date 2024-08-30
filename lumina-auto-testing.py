@@ -99,18 +99,18 @@ def autotesting_aggregate(new_data, target_roas_d0, target_cpi):
     }
 
     # Lumina Score calculation with penalties for unreliable installs
-def calculate_lumina_score(row):
-    base_score = sigmoid(np.log(
-        np.exp(row['z_cost'] * weights['z_cost']) * 
-        np.exp(row['z_ROAS_diff'] * weights['z_ROAS_diff']) * 
-        np.exp(row['z_ROAS_Mat_D3'] * weights['z_ROAS_Mat_D3']) * 
-        np.exp(row['z_IPM'] * weights['z_IPM']) * 
-        np.exp(row['z_CPI_diff'] * weights['z_CPI_diff'])
-    ))
-    # Penalize if installs are low or unreliable
-    if row['installs'] < 5 or row['IPM'] < 0.5:
-        return base_score * 0.8  # Penalize by 20%
-    return base_score
+    def calculate_lumina_score(row):
+        base_score = sigmoid(np.log(
+            np.exp(row['z_cost'] * weights['z_cost']) * 
+            np.exp(row['z_ROAS_diff'] * weights['z_ROAS_diff']) * 
+            np.exp(row['z_ROAS_Mat_D3'] * weights['z_ROAS_Mat_D3']) * 
+            np.exp(row['z_IPM'] * weights['z_IPM']) * 
+            np.exp(row['z_CPI_diff'] * weights['z_CPI_diff'])
+        ))
+        # Penalize if installs are low or unreliable
+        if row['installs'] < 5 or row['IPM'] < 0.5:
+            return base_score * 0.8  # Penalize by 20%
+        return base_score
 
     valid_creatives = aggregated_data[aggregated_data['installs'] >= 5]
     valid_creatives['Lumina_Score'] = valid_creatives.apply(calculate_lumina_score, axis=1)
@@ -164,7 +164,7 @@ if new_file and game_code:
             'Display', 'TTCC_0021_Ship Craft - Gaming App'
         ]
         new_data = new_data[~new_data['creative_network'].isin(exclude_creative_ids)]
-        new_data = new_data[~new_data['creative_network'].str.startswith('TTCC')]
+                new_data = new_data[~new_data['creative_network'].str.startswith('TTCC')]
 
         # Step 3: Extract creative IDs
         new_data['creative_id'] = new_data.apply(lambda row: extract_creative_id(row['creative_network'], game_code), axis=1)
@@ -182,4 +182,3 @@ if new_file and game_code:
             # Step 6: Output the overall creative performance data as CSV
             overall_output = aggregated_data.to_csv(index=False)
             st.download_button("Download Overall Creative Performance CSV", overall_output.encode('utf-8'), "Overall_Creative_Performance.csv")
-
