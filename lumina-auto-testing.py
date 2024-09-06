@@ -82,78 +82,79 @@ def autotesting_aggregate(new_data, target_roas_d0, target_cpi):
         'CPI': 'mean'
     }).reset_index()
     
-            # CPI = Total Aggregated Cost / Total Aggregated Installs
-        aggregated_data['CPI'] = np.where(aggregated_data['installs'] != 0, 
-                                          aggregated_data['cost'] / aggregated_data['installs'], 
+         # CPI = Total Aggregated Cost / Total Aggregated Installs
+    aggregated_data['CPI'] = np.where(aggregated_data['installs'] != 0, 
+                                      aggregated_data['cost'] / aggregated_data['installs'], 
+                                      0)
+    
+    # LTV calculations for D0, D3, D7
+    aggregated_data['LTV_D0'] = np.where(aggregated_data['installs'] != 0, 
+                                         aggregated_data['custom_cohorted_total_revenue_d0'] / aggregated_data['installs'], 
+                                         0)
+    aggregated_data['LTV_D3'] = np.where(aggregated_data['installs'] != 0, 
+                                         aggregated_data['custom_cohorted_total_revenue_d3'] / aggregated_data['installs'], 
+                                         0)
+    aggregated_data['LTV_D7'] = np.where(aggregated_data['installs'] != 0, 
+                                         aggregated_data['custom_cohorted_total_revenue_d7'] / aggregated_data['installs'], 
+                                         0)
+    
+    # ROAS calculation using LTV and CPI
+    aggregated_data['ROAS_d0'] = np.where(aggregated_data['CPI'] != 0, 
+                                          aggregated_data['LTV_D0'] / aggregated_data['CPI'], 
                                           0)
-        
-        # LTV calculations for D0, D3, D7
-        aggregated_data['LTV_D0'] = np.where(aggregated_data['installs'] != 0, 
-                                             aggregated_data['custom_cohorted_total_revenue_d0'] / aggregated_data['installs'], 
-                                             0)
-        aggregated_data['LTV_D3'] = np.where(aggregated_data['installs'] != 0, 
-                                             aggregated_data['custom_cohorted_total_revenue_d3'] / aggregated_data['installs'], 
-                                             0)
-        aggregated_data['LTV_D7'] = np.where(aggregated_data['installs'] != 0, 
-                                             aggregated_data['custom_cohorted_total_revenue_d7'] / aggregated_data['installs'], 
-                                             0)
-        
-        # ROAS calculation using LTV and CPI
-        aggregated_data['ROAS_d0'] = np.where(aggregated_data['CPI'] != 0, 
-                                              aggregated_data['LTV_D0'] / aggregated_data['CPI'], 
-                                              0)
-        aggregated_data['ROAS_d3'] = np.where(aggregated_data['CPI'] != 0, 
-                                              aggregated_data['LTV_D3'] / aggregated_data['CPI'], 
-                                              0)
-        aggregated_data['ROAS_d7'] = np.where(aggregated_data['CPI'] != 0, 
-                                              aggregated_data['LTV_D7'] / aggregated_data['CPI'], 
-                                              0)
-        
-        # Handle Inf and NaN values in ROAS calculations
-        aggregated_data['ROAS_d0'].replace([np.inf, -np.inf], np.nan, inplace=True)
-        aggregated_data['ROAS_d3'].replace([np.inf, -np.inf], np.nan, inplace=True)
-        aggregated_data['ROAS_d7'].replace([np.inf, -np.inf], np.nan, inplace=True)
-        aggregated_data['ROAS_d0'].fillna(0, inplace=True)
-        aggregated_data['ROAS_d3'].fillna(0, inplace=True)
-        aggregated_data['ROAS_d7'].fillna(0, inplace=True)
-        
-        # Calculate ROAS Mat. D3 with error handling for division
-        aggregated_data['ROAS Mat. D3'] = np.where(
-            aggregated_data['ROAS_d0'] != 0,
-            aggregated_data['ROAS_d3'] / aggregated_data['ROAS_d0'],
-            0  # Set to 0 when ROAS_d0 is zero to avoid division by zero
-        )
-        aggregated_data['ROAS Mat. D3'].replace([np.inf, -np.inf], np.nan, inplace=True)
-        aggregated_data['ROAS Mat. D3'].fillna(0, inplace=True)
-        
-        # Calculate ROAS_diff safely
-        aggregated_data['ROAS_diff'] = aggregated_data['ROAS_d0'] - target_roas_d0
-        aggregated_data['ROAS_diff'].replace([np.inf, -np.inf], np.nan, inplace=True)
-        aggregated_data['ROAS_diff'].fillna(0, inplace=True)
-        
-        # Calculate CPI_diff safely
-        aggregated_data['CPI_diff'] = target_cpi - aggregated_data['CPI']
-        aggregated_data['CPI_diff'].replace([np.inf, -np.inf], np.nan, inplace=True)
-        aggregated_data['CPI_diff'].fillna(0, inplace=True)
-        
-        # Calculate IPM
-        aggregated_data['IPM'] = (aggregated_data['installs'] / aggregated_data['impressions']) * 1000
-        aggregated_data['IPM'].replace([float('inf'), -float('inf')], 0, inplace=True)
-        aggregated_data['IPM'] = aggregated_data['IPM'].round(2)
-        
-        # Apply robust z-scores, ensuring no NaN or Inf values
-        aggregated_data['z_ROAS_Mat_D3'] = calculate_robust_zscore(aggregated_data['ROAS Mat. D3'])
-        aggregated_data['z_cost'] = calculate_robust_zscore(aggregated_data['cost'])
-        aggregated_data['z_ROAS_diff'] = calculate_robust_zscore(aggregated_data['ROAS_diff'])
-        aggregated_data['z_IPM'] = calculate_robust_zscore(aggregated_data['IPM'])
-        aggregated_data['z_CPI_diff'] = calculate_robust_zscore(aggregated_data['CPI_diff'])
-        
-        # Min-Max Scaling on z-scores, handling potential zero division
-        aggregated_data['scaled_ROAS_Mat_D3'] = min_max_scale(aggregated_data['z_ROAS_Mat_D3'])
-        aggregated_data['scaled_cost'] = min_max_scale(aggregated_data['z_cost'])
-        aggregated_data['scaled_ROAS_diff'] = min_max_scale(aggregated_data['z_ROAS_diff'])
-        aggregated_data['scaled_IPM'] = min_max_scale(aggregated_data['z_IPM'])
-        aggregated_data['scaled_CPI_diff'] = min_max_scale(aggregated_data['z_CPI_diff'])
+    aggregated_data['ROAS_d3'] = np.where(aggregated_data['CPI'] != 0, 
+                                          aggregated_data['LTV_D3'] / aggregated_data['CPI'], 
+                                          0)
+    aggregated_data['ROAS_d7'] = np.where(aggregated_data['CPI'] != 0, 
+                                          aggregated_data['LTV_D7'] / aggregated_data['CPI'], 
+                                          0)
+    
+    # Handle Inf and NaN values in ROAS calculations
+    aggregated_data['ROAS_d0'].replace([np.inf, -np.inf], np.nan, inplace=True)
+    aggregated_data['ROAS_d3'].replace([np.inf, -np.inf], np.nan, inplace=True)
+    aggregated_data['ROAS_d7'].replace([np.inf, -np.inf], np.nan, inplace=True)
+    aggregated_data['ROAS_d0'].fillna(0, inplace=True)
+    aggregated_data['ROAS_d3'].fillna(0, inplace=True)
+    aggregated_data['ROAS_d7'].fillna(0, inplace=True)
+    
+    # Calculate ROAS Mat. D3 with error handling for division
+    aggregated_data['ROAS Mat. D3'] = np.where(
+        aggregated_data['ROAS_d0'] != 0,
+        aggregated_data['ROAS_d3'] / aggregated_data['ROAS_d0'],
+        0  # Set to 0 when ROAS_d0 is zero to avoid division by zero
+    )
+    aggregated_data['ROAS Mat. D3'].replace([np.inf, -np.inf], np.nan, inplace=True)
+    aggregated_data['ROAS Mat. D3'].fillna(0, inplace=True)
+    
+    # Calculate ROAS_diff safely
+    aggregated_data['ROAS_diff'] = aggregated_data['ROAS_d0'] - target_roas_d0
+    aggregated_data['ROAS_diff'].replace([np.inf, -np.inf], np.nan, inplace=True)
+    aggregated_data['ROAS_diff'].fillna(0, inplace=True)
+    
+    # Calculate CPI_diff safely
+    aggregated_data['CPI_diff'] = target_cpi - aggregated_data['CPI']
+    aggregated_data['CPI_diff'].replace([np.inf, -np.inf], np.nan, inplace=True)
+    aggregated_data['CPI_diff'].fillna(0, inplace=True)
+    
+    # Calculate IPM
+    aggregated_data['IPM'] = (aggregated_data['installs'] / aggregated_data['impressions']) * 1000
+    aggregated_data['IPM'].replace([float('inf'), -float('inf')], 0, inplace=True)
+    aggregated_data['IPM'] = aggregated_data['IPM'].round(2)
+    
+    # Apply robust z-scores, ensuring no NaN or Inf values
+    aggregated_data['z_ROAS_Mat_D3'] = calculate_robust_zscore(aggregated_data['ROAS Mat. D3'])
+    aggregated_data['z_cost'] = calculate_robust_zscore(aggregated_data['cost'])
+    aggregated_data['z_ROAS_diff'] = calculate_robust_zscore(aggregated_data['ROAS_diff'])
+    aggregated_data['z_IPM'] = calculate_robust_zscore(aggregated_data['IPM'])
+    aggregated_data['z_CPI_diff'] = calculate_robust_zscore(aggregated_data['CPI_diff'])
+    
+    # Min-Max Scaling on z-scores, handling potential zero division
+    aggregated_data['scaled_ROAS_Mat_D3'] = min_max_scale(aggregated_data['z_ROAS_Mat_D3'])
+    aggregated_data['scaled_cost'] = min_max_scale(aggregated_data['z_cost'])
+    aggregated_data['scaled_ROAS_diff'] = min_max_scale(aggregated_data['z_ROAS_diff'])
+    aggregated_data['scaled_IPM'] = min_max_scale(aggregated_data['z_IPM'])
+    aggregated_data['scaled_CPI_diff'] = min_max_scale(aggregated_data['z_CPI_diff'])
+
 
 
     # Define weights for each component
