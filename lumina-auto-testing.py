@@ -82,14 +82,33 @@ def autotesting_aggregate(new_data, target_roas_d0, target_cpi):
         'CPI': 'mean'
     }).reset_index()
     
-    # Calculating ROAS values based on cohorted revenue, handling potential division by zero
-    aggregated_data['ROAS_d0'] = np.where(aggregated_data['cost'] != 0, 
-                                      aggregated_data['custom_cohorted_total_revenue_d0'] / aggregated_data['cost'], 0)
-    aggregated_data['ROAS_d3'] = np.where(aggregated_data['cost'] != 0, 
-                                      aggregated_data['custom_cohorted_total_revenue_d3'] / aggregated_data['cost'], 0)
-    aggregated_data['ROAS_d7'] = np.where(aggregated_data['cost'] != 0, 
-                                      aggregated_data['custom_cohorted_total_revenue_d7'] / aggregated_data['cost'], 0)
-
+        # CPI = Total Aggregated Cost / Total Aggregated Installs
+    aggregated_data['CPI'] = np.where(aggregated_data['installs'] != 0, 
+                                      aggregated_data['cost'] / aggregated_data['installs'], 
+                                      0)
+    
+    # LTV calculations for D0, D3, D7
+    aggregated_data['LTV_D0'] = np.where(aggregated_data['installs'] != 0, 
+                                         aggregated_data['custom_cohorted_total_revenue_d0'] / aggregated_data['installs'], 
+                                         0)
+    aggregated_data['LTV_D3'] = np.where(aggregated_data['installs'] != 0, 
+                                         aggregated_data['custom_cohorted_total_revenue_d3'] / aggregated_data['installs'], 
+                                         0)
+    aggregated_data['LTV_D7'] = np.where(aggregated_data['installs'] != 0, 
+                                         aggregated_data['custom_cohorted_total_revenue_d7'] / aggregated_data['installs'], 
+                                         0)
+    
+    # ROAS calculation using LTV and CPI
+    aggregated_data['ROAS_d0'] = np.where(aggregated_data['CPI'] != 0, 
+                                          aggregated_data['LTV_D0'] / aggregated_data['CPI'], 
+                                          0)
+    aggregated_data['ROAS_d3'] = np.where(aggregated_data['CPI'] != 0, 
+                                          aggregated_data['LTV_D3'] / aggregated_data['CPI'], 
+                                          0)
+    aggregated_data['ROAS_d7'] = np.where(aggregated_data['CPI'] != 0, 
+                                          aggregated_data['LTV_D7'] / aggregated_data['CPI'], 
+                                          0)
+    
     # Handle Inf and NaN values in ROAS calculations
     aggregated_data['ROAS_d0'].replace([np.inf, -np.inf], np.nan, inplace=True)
     aggregated_data['ROAS_d3'].replace([np.inf, -np.inf], np.nan, inplace=True)
