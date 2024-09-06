@@ -76,17 +76,26 @@ def autotesting_aggregate(new_data, target_roas_d0, target_cpi):
         'lifetime_value_d0': 'mean',
         'lifetime_value_d3': 'mean',
         'lifetime_value_d7': 'mean',
+        'custom_cohorted_total_revenue_d0': 'sum',
+        'custom_cohorted_total_revenue_d3': 'sum',
+        'custom_cohorted_total_revenue_d7': 'sum',
         'CPI': 'mean'
     }).reset_index()
+    
+    # Calculating ROAS values based on cohorted revenue
+    aggregated_data['ROAS_d0'] = (aggregated_data['custom_cohorted_total_revenue_d0'] / aggregated_data['installs']) / (aggregated_data['cost'] / aggregated_data['installs'])
+    aggregated_data['ROAS_d3'] = (aggregated_data['custom_cohorted_total_revenue_d3'] / aggregated_data['installs']) / (aggregated_data['cost'] / aggregated_data['installs'])
+    aggregated_data['ROAS_d7'] = (aggregated_data['custom_cohorted_total_revenue_d7'] / aggregated_data['installs']) / (aggregated_data['cost'] / aggregated_data['installs'])
+
 
     aggregated_data['IPM'] = (aggregated_data['installs'] / aggregated_data['impressions']) * 1000
     aggregated_data['IPM'].replace([float('inf'), -float('inf')], 0, inplace=True)
     aggregated_data['IPM'] = aggregated_data['IPM'].round(2)
 
-    aggregated_data['ROAS_diff'] = aggregated_data['roas_d0'] - target_roas_d0
+    aggregated_data['ROAS_diff'] = aggregated_data['ROAS_d0'] - target_roas_d0
     aggregated_data['CPI_diff'] = target_cpi - aggregated_data['CPI']
 
-    aggregated_data['ROAS Mat. D3'] = (aggregated_data['roas_d3'] / aggregated_data['roas_d0']).replace([float('inf'), -float('inf'), np.nan], 0).round(2)
+    aggregated_data['ROAS Mat. D3'] = (aggregated_data['ROAS_d3'] / aggregated_data['ROAS_d0']).replace([float('inf'), -float('inf'), np.nan], 0).round(2)
     aggregated_data['z_ROAS_Mat_D3'] = calculate_robust_zscore(aggregated_data['ROAS Mat. D3'])
     aggregated_data['z_cost'] = calculate_robust_zscore(aggregated_data['cost'])
     aggregated_data['z_ROAS_diff'] = calculate_robust_zscore(aggregated_data['ROAS_diff'])
@@ -102,11 +111,11 @@ def autotesting_aggregate(new_data, target_roas_d0, target_cpi):
 
     # Define weights for each component
     weights = {
-        'scaled_cost': 1.0,
-        'scaled_ROAS_diff': 2,
+        'scaled_cost': 0.7,
+        'scaled_ROAS_diff': 1.5,
         'scaled_ROAS_Mat_D3': 1.0,
         'scaled_IPM': 1.0,
-        'scaled_CPI_diff': 1.15
+        'scaled_CPI_diff': 1.2
     }
 
     # Lumina Score calculation using weighted sum and sigmoid transformation
@@ -173,7 +182,7 @@ if new_file and game_code:
         # Step 2: Filter out irrelevant creatives
         exclude_creative_ids = [
             'Search SearchPartners', 'Search GoogleSearch', 'Youtube YouTubeVideos',
-            'Display', 'TTCC_0021_Ship Craft - Gaming App'
+            'Display', 'TTCC'
         ]
         new_data = new_data[~new_data['creative_network'].isin(exclude_creative_ids)]
         new_data = new_data[~new_data['creative_network'].str.startswith('TTCC')]
@@ -193,4 +202,4 @@ if new_file and game_code:
             
             # Step 6: Output the overall creative performance data as CSV
             overall_output = aggregated_data.to_csv(index=False)
-            st.download_button("Download Overall Creative Performance CSV", overall_output.encode('utf-8'), "Overall_Creative_Performance.csv")
+            st.download_button("Download Overall Creative Performance CSV", overall_output.encode('utf-8'), "Creative_Performance.csv")
