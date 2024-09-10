@@ -87,16 +87,16 @@ def autotesting_aggregate(new_data, target_roas_d0, target_cpi):
                                       aggregated_data['cost'] / aggregated_data['installs'], 
                                       0)
     
-    # LTV calculations for D0, D3, D7
     aggregated_data['LTV_D0'] = np.where(aggregated_data['installs'] != 0, 
                                          aggregated_data['custom_cohorted_total_revenue_d0'] / aggregated_data['installs'], 
                                          0)
     aggregated_data['LTV_D3'] = np.where(aggregated_data['installs'] != 0, 
-                                         aggregated_data['custom_cohorted_total_revenue_d3'] / aggregated_data['installs'], 
+                                         (aggregated_data['custom_cohorted_total_revenue_d0'] + aggregated_data['custom_cohorted_total_revenue_d3']) / aggregated_data['installs'], 
                                          0)
     aggregated_data['LTV_D7'] = np.where(aggregated_data['installs'] != 0, 
-                                         aggregated_data['custom_cohorted_total_revenue_d7'] / aggregated_data['installs'], 
+                                         (aggregated_data['custom_cohorted_total_revenue_d0'] + aggregated_data['custom_cohorted_total_revenue_d3'] + aggregated_data['custom_cohorted_total_revenue_d7']) / aggregated_data['installs'], 
                                          0)
+
     
     # ROAS calculation using LTV and CPI
     aggregated_data['ROAS_d0'] = np.where(aggregated_data['CPI'] != 0, 
