@@ -185,11 +185,11 @@ def autotesting_aggregate(new_data, target_roas_d0, target_cpi, data_source):
 
     # Define weights for each component
     weights = {
-        'scaled_cost': 0.7,
+        'scaled_cost': 1.0,
         'scaled_ROAS_diff': 1.5,
         'scaled_ROAS_Mat_D3': 1.0,
         'scaled_IPM': 1.0,
-        'scaled_CPI_diff': 1.2
+        'scaled_CPI_diff': 1.3
     }
 
     # Adjust weights if only Unity data is selected (since ROAS and CPI metrics are not available)
